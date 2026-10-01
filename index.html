@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SKYWAVE</title>
+<link rel="icon" href="data:,">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  :root { --cream: #f4e6cc; --dim: rgba(244, 230, 204, 0.55); --amber: #ffb866; --ink: #0b0912; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #07060c; color: var(--cream); font-family: Georgia, "Times New Roman", serif; }
+  #app canvas { display: block; width: 100vw; height: 100vh; outline: none; }
+  #vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 55%, transparent 55%, rgba(4, 2, 10, 0.55) 100%); }
+  #ui { position: fixed; inset: 0; pointer-events: none; }
+  .hidden { display: none !important; }
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; }
+  .pause, .stations { background: radial-gradient(ellipse at center, rgba(12, 9, 22, 0.78), rgba(5, 4, 10, 0.92)); }
+  .title { justify-content: flex-end; padding-bottom: 12vh; background: linear-gradient(to top, rgba(6, 4, 12, 0.85), transparent 60%); }
+  .logo { text-align: center; margin-bottom: 4vh; }
+  .logo h1 { font-weight: normal; font-size: clamp(48px, 9vw, 120px); letter-spacing: 0.32em; margin: 0 0 0 0.32em; color: var(--cream); text-shadow: 0 0 40px rgba(255, 190, 120, 0.35); }
+  .logo p { font-style: italic; font-size: clamp(14px, 1.6vw, 19px); max-width: 38em; margin: 1em auto 0; color: var(--dim); line-height: 1.5; padding: 0 16px; }
+  h2 { font-weight: normal; letter-spacing: 0.3em; text-transform: uppercase; font-size: 18px; color: var(--dim); margin: 0 0 1.6em; }
+  .menu { display: flex; flex-direction: column; align-items: center; gap: 0.35em; }
+  .menu button { background: none; border: none; color: var(--dim); font: inherit; font-size: 20px; padding: 0.3em 1.2em; cursor: pointer; position: relative; letter-spacing: 0.04em; }
+  .menu button:focus, .menu button:hover { color: var(--cream); outline: none; }
+  .menu button:focus::before { content: ""; position: absolute; left: 0.2em; top: 50%; width: 0.45em; height: 2px; background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+  .menu button.off { opacity: 0.35; cursor: default; }
+  .menu .fq { font-family: ui-monospace, Consolas, monospace; font-size: 0.72em; color: var(--amber); margin-right: 0.8em; display: inline-block; min-width: 6em; text-align: right; }
+  .menu .static { letter-spacing: -0.1em; opacity: 0.5; }
+  .slider { display: flex; align-items: center; gap: 1em; font-size: 16px; color: var(--dim); margin: 0.1em 0; }
+  .slider span { min-width: 5em; text-align: right; }
+  .slider input { accent-color: var(--amber); width: 12em; }
+  .found { text-align: center; color: var(--dim); margin: -0.6em 0 1.6em; font-size: 15px; line-height: 1.8; }
+  .found span { margin: 0 0.6em; color: var(--cream); }
+  .hint { margin-top: 3vh; opacity: 0.6; font-size: 13px; }
+  .key { display: inline-block; min-width: 1.7em; padding: 0.15em 0.35em; margin: 0.12em; border: 1px solid rgba(244, 230, 204, 0.6); border-bottom-width: 3px; border-radius: 6px; font-family: ui-monospace, Consolas, monospace; font-size: 14px; text-align: center; background: rgba(10, 8, 18, 0.55); color: var(--cream); }
+  .key.wide { min-width: 4.5em; }
+  .mouse { display: inline-block; width: 18px; height: 28px; border: 1.5px solid var(--cream); border-radius: 9px; position: relative; vertical-align: middle; }
+  .mouse i { position: absolute; left: 50%; top: 5px; width: 2px; height: 6px; background: var(--cream); transform: translateX(-50%); }
+  .mouse.small { width: 13px; height: 20px; }
+  .arrows { font-size: 22px; margin-left: 6px; vertical-align: middle; }
+  .prompt { position: absolute; left: 0; top: 0; text-align: center; animation: bob 1.4s ease-in-out infinite; filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.6)); }
+  .prompt .keys { line-height: 1; }
+  @keyframes bob { 50% { margin-top: -6px; } }
+  .levelcard { position: absolute; left: 4vw; bottom: 6vh; opacity: 0; display: flex; flex-direction: column; gap: 0.2em; }
+  .levelcard.show { animation: card 5.5s ease forwards; }
+  .levelcard .fq { font-family: ui-monospace, Consolas, monospace; color: var(--amber); letter-spacing: 0.2em; font-size: 14px; }
+  .levelcard .nm { font-size: clamp(24px, 3.2vw, 40px); font-style: italic; }
+  @keyframes card { 0% { opacity: 0; transform: translateY(8px); } 12% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; } }
+  .card { position: absolute; right: 3vw; bottom: 5vh; max-width: min(360px, 80vw); background: rgba(10, 8, 18, 0.72); border: 1px solid rgba(244, 230, 204, 0.2); padding: 14px 18px; border-radius: 4px; opacity: 0; transition: opacity 0.8s, transform 0.8s; transform: translateY(10px); }
+  .card.in { opacity: 1; transform: none; }
+  .card.out { opacity: 0; transform: translateY(10px); }
+  .card h3 { margin: 0 0 0.3em; font-weight: normal; font-style: italic; font-size: 22px; }
+  .card p { margin: 0.4em 0 0; line-height: 1.5; color: var(--dim); font-size: 15px; }
+  .card .dim { opacity: 0.6; }
+  .card .qsl canvas { width: 100%; height: auto; display: block; border-radius: 2px; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5); }
+  .card .glyph { margin-top: 0.6em; font-size: 20px; }
+  .tuner { position: absolute; inset: 0; pointer-events: auto; opacity: 0; transition: opacity 0.4s; background: #0b0a10; }
+  .tuner.in { opacity: 1; }
+  .tuner.out { opacity: 0; transition: opacity 0.6s; }
+  .tuner canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.55; image-rendering: auto; filter: blur(0.6px); }
+  .tuner .dial { position: absolute; left: 12vw; right: 12vw; top: 50%; height: 44px; border-top: 1px solid rgba(244, 230, 204, 0.5); border-bottom: 1px solid rgba(244, 230, 204, 0.5); background: rgba(255, 200, 130, 0.07); }
+  .tuner .ticks { position: absolute; inset: 0; display: flex; justify-content: space-between; align-items: flex-end; }
+  .tuner .ticks i { width: 1px; height: 10px; background: rgba(244, 230, 204, 0.5); }
+  .tuner .ticks i.major { height: 20px; }
+  .tuner .needle { position: absolute; top: -14px; bottom: -14px; width: 2px; background: #ff6a3a; box-shadow: 0 0 12px #ff6a3a; }
+  .tuner .station { position: absolute; left: 0; right: 0; top: calc(50% + 70px); text-align: center; font-style: italic; font-size: clamp(20px, 3vw, 34px); }
+  .tuner .station .fq { font-style: normal; font-family: ui-monospace, Consolas, monospace; font-size: 0.5em; color: var(--amber); letter-spacing: 0.2em; display: block; margin-bottom: 0.4em; }
+  .debug { position: absolute; left: 10px; top: 10px; pointer-events: auto; background: rgba(0, 0, 0, 0.75); padding: 8px; font: 12px ui-monospace, Consolas, monospace; max-height: 90vh; overflow: auto; width: 220px; }
+  .debug button { display: block; width: 100%; margin: 2px 0; background: #1e1a2a; color: #eee; border: 1px solid #444; font: inherit; text-align: left; cursor: pointer; padding: 3px 6px; }
+  .debug .sep { margin-top: 8px; opacity: 0.6; }
+  .fps { position: absolute; right: 10px; top: 10px; font: 12px ui-monospace, Consolas, monospace; opacity: 0.8; }
+  .ending { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.9em; text-align: center; padding: 0 16px; }
+  .ending p { opacity: 0; transition: opacity 2.4s; margin: 0; font-size: clamp(16px, 2vw, 22px); font-style: italic; text-shadow: 0 0 20px rgba(0, 0, 0, 0.8); }
+  .ending p.big { font-style: normal; font-size: clamp(40px, 7vw, 96px); letter-spacing: 0.32em; }
+  .ending p.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="vignette"></div>
+<div id="ui"></div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
