@@ -88,7 +88,8 @@ export class CameraRig {
     if (this.snapNext || d < this.curDist) this.curDist = lerp(this.curDist, d, this.snapNext ? 1 : damp(18, dt));
     else this.curDist = lerp(this.curDist, d, damp(2.5, dt));
     let px = this.target.x + dir.x * this.curDist, py = this.target.y + dir.y * this.curDist, pz = this.target.z + dir.z * this.curDist;
-    const gb = physics.groundBelow(px, py + 2, pz, 6, 0.1);
+    // probe from no higher than Pip's head, so a roof over Pip never counts as floor
+    const gb = physics.groundBelow(px, Math.min(py + 2, renderPos.y + 0.9), pz, 6, 0.1);
     if (gb && py < gb.y + 0.5) py = gb.y + 0.5;
     const liq = world.liquidAt(px, pz);
     if (liq && py < liq.y + 0.4) py = liq.y + 0.4;

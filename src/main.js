@@ -69,6 +69,8 @@ class Game {
     const def = LEVELS[id];
     if (!def) throw new Error('No level ' + id);
     this.fx.clear();
+    audio.setMuffle(0);
+    clearTimeout(this.completeTimer); this.completing = false;
     const sp = this.world.load(def, opts);
     this.player.teleport(sp.x, sp.y, sp.z, sp.yaw ?? 0);
     this.player.state = 'play';
@@ -145,7 +147,7 @@ class Game {
     });
     const def = this.world.def;
     if (def.onComplete) def.onComplete(this.world.state, this);
-    setTimeout(() => {
+    this.completeTimer = setTimeout(() => {
       this.completing = false;
       if (id === 'closedown') this.ending();
       else this.goto('hub', { from: id });
@@ -207,6 +209,7 @@ class Game {
       else if (!s.seen('look') && this.world.def.id === 'hub' && this.time > 6) show = 'look';
       for (const p of this.world.prompts) if (!s.seen(p.glyph) && Math.hypot(P.x - p.x, P.z - p.z) < p.r && Math.abs(P.y - p.y) < 4) show = p.glyph;
     }
+    if (!this.input.enabled) show = null;
     if (!show) return this.ui.prompt(null);
     const v = new THREE.Vector3(this.renderPos.x, this.renderPos.y + 1.6, this.renderPos.z).project(this.camera);
     this.ui.prompt(show, (v.x * 0.5 + 0.5) * innerWidth, (-v.y * 0.5 + 0.5) * innerHeight);

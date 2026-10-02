@@ -19,7 +19,14 @@ function tideAt(t) {
 }
 
 const ROCK = 0x8c979c, ROCK_S = 0x4c5860, SAND = 0xc2b08e, STONE = 0xa29a8a, SODIUM = 0xffa040;
-const RIP = { x0: -56, x1: -43, z0: -30, z1: 20 };
+// The rip rings the outer wreck: swimmers and floating echoes are carried away from it on
+// every side, except over the reef it sits on. Only skipping gets you across.
+const RIP = { x: -62, z: -8, x0: -84, x1: -43, z0: -34, z1: 20 };
+const inRip = (x, z) => x > RIP.x0 && x < RIP.x1 && z > RIP.z0 && z < RIP.z1 && !(x > -68.5 && x < -53.5 && z > -15.5 && z < -0.5);
+function ripPush(o, dt) {
+  const dx = o.x - RIP.x, dz = o.z - RIP.z, d = Math.hypot(dx, dz) || 1;
+  o.x += (dx / d) * 6 * dt; o.z += (dz / d) * 6 * dt;
+}
 
 export default {
   id: 'tide',
@@ -120,7 +127,7 @@ export default {
     L.secret('stray', 'stray', -64, 7, -8, { stray: 'foghorn', name: 'The Foghorn calf', line: 'A note from a lightship that went out of service long ago. It still warns everyone about everything, very kindly.' });
 
     // ---- the storm: a broken breakwater to the lighthouse
-    for (const [x, z, w, d, top] of [[0, -58, 5, 5, 8.6], [0, -63, 4, 4.5, 9.4], [-6, -71, 5, 5, 7.0], [5, -48, 3, 3, 3.6]]) L.block(x, -46, z, w, top + 46, d, { color: STONE });
+    for (const [x, z, w, d, top] of [[0, -58, 5, 5, 7.4], [0, -63, 4, 4.5, 9.4], [-6, -71, 5, 5, 7.0], [5, -48, 3, 3, 3.6]]) L.block(x, -46, z, w, top + 46, d, { color: STONE });
     L.checkpoint(0, 9.4, -63, { depth: 5 });
     L.camZone(0, -2, -62, 30, 20, 34, { dist: 10.5, pitch: 0.42 });
     for (const [x, z] of [[-10, -50], [9, -66], [-14, -78]]) {
@@ -159,10 +166,11 @@ export default {
     L.mesh(beam([-1, gy + 2.1, -86.9], [1, gy + 2.1, -86.9], 0.12, 0x5a5a5a));
     L.trigger(0, gy, -86.9, 2.4, 3, 2.4, { once: true, enter: (gg) => this.ringBell(st, gg) });
     // the cable to the far rock (Line)
-    L.wire([[3.4, gy + 2.6, -94], [38, 8, -104]], { sag: 0.02, radius: 0.06, color: 0x6a6a6a, oneWay: 1 });
-    L.block(40, -46, -105, 8, 52, 8, { color: ROCK });
-    L.block(40, 6, -105, 2, 0.6, 2, { color: STONE });
-    L.secret('harmonic', 'harmonic', 40, 7.6, -105);
+    // the far rock stands above anything a swimmer can reach, even on a storm crest
+    L.wire([[3.4, gy + 2.6, -94], [38, 14, -104]], { sag: 0.02, radius: 0.06, color: 0x6a6a6a, oneWay: 1 });
+    L.block(40, -46, -105, 8, 58, 8, { color: ROCK });
+    L.block(40, 12, -105, 2, 0.6, 2, { color: STONE });
+    L.secret('harmonic', 'harmonic', 40, 13.6, -105);
     L.block(30, -46, -98, 3, 50.6, 3, { color: STONE });
     L.block(22, -46, -94, 3, 50.2, 3, { color: STONE });
 
@@ -206,7 +214,11 @@ export default {
     setTimeout(() => { if (g.player.state === 'frozen') g.player.state = 'play'; }, 8200);
   },
 
-  onCheckpoint(st, cp) { if (cp.depth >= 4) st.storm = 1; },
+  onCheckpoint(st, cp) {
+    if (cp.depth >= 4) st.storm = 1;
+    // resuming on the seabed: the spring tide has already gone out
+    if (cp.depth >= 8 && !st.spring) { st.spring = { t: 99, from: -47 }; st.level = -47; }
+  },
 
   onComplete(st, g) {
     st.returning = 0;
@@ -230,8 +242,8 @@ export default {
     if (!st.storm && Math.sign(st.level - prev) !== Math.sign(st.lastDir || 0) && Math.abs(st.level - prev) > 1e-4) { st.lastDir = Math.sign(st.level - prev); audio.whoosh(1.4); }
     // the rip pulls swimmers (and floating echoes) out to sea
     const p = g.player, P = p.pos;
-    if (p.swimming && P.x > RIP.x0 && P.x < RIP.x1 && P.z > RIP.z0 && P.z < RIP.z1) P.x += 6 * dt;
-    for (const e of g.world.echoes) if (e.floating && e.x > RIP.x0 && e.x < RIP.x1 && e.z > RIP.z0 && e.z < RIP.z1) { e.x += 6 * dt; e.col.moveTo(e.x, e.y, e.z); }
+    if (p.swimming && inRip(P.x, P.z)) ripPush(P, dt);
+    for (const e of g.world.echoes) if (e.floating && inRip(e.x, e.z)) { ripPush(e, dt); e.col.moveTo(e.x, e.y, e.z); }
     if (st.returning !== undefined && P.y < st.level - 0.5) { P.y = st.level - 0.5; p.vel.y = 0; }
   },
 

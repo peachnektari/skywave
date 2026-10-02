@@ -119,8 +119,13 @@ export default {
     this.buildStrays(L, st, s, 11, H(11, 56), 56);
 
     // the listening terrace (teaches echo on the way up to the mast)
+    // three weathered stones, each too tall for a jump alone, and a horn turned to the sky
     const ty = H(8, 30);
-    L.block(8, ty - 2, 27.5, 13, 5.8, 5, { color: 0x8a7a98 });
+    for (const [x, w, top, z] of [[3.75, 4.5, 3.8, 27.4], [8.25, 4.5, 4.2, 27.1], [12.5, 4, 3.8, 27.7]]) L.block(x, ty - 2, z, w, top + 2, 5, { color: 0x9a8aa8, side: 0x6a5c7c, bevel: 0.4 });
+    L.pillar(5.2, ty + 3.8, 26.2, 0.07, 2.1, { color: 0x5a5068, seg: 6, solid: false });
+    L.mesh(place(cylinder(0.62, 0.1, 1.0, 14, 0x9a90a8, 0x6a6078), 5.2, ty + 5.6, 26.2, 0.6, -0.5));
+    L.glow(5.5, ty + 6.6, 26.6, 0xffc890, 2.4, { opacity: 0.45 });
+    L.block(9, ty + 4.2, 26.4, 2.4, 0.4, 0.6, { color: 0x6a5048, solid: false });
     L.prompt(8, ty, 32, 4, 'echo');
     L.checkpoint(12, ty + 3.8, 27.5, { depth: 1 });
 
@@ -187,7 +192,7 @@ export default {
     for (const id of ORDER) {
       const e = ENTR[id];
       if (!e || !e.door || !e.open || !LEVELS[id]) continue;
-      L.trigger(e.door[0], e.door[1], e.door[2], 1.8, 2.8, 1.8, { enter: (gg) => { if (!gg.completing) gg.goto(id); } });
+      L.trigger(e.door[0], e.door[1] - 0.8, e.door[2], 1.8, 3.6, 1.8, { enter: (gg) => { if (!gg.completing) gg.goto(id); } });
     }
 
     this.decorate(L);
