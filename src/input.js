@@ -31,7 +31,12 @@ export class Input {
       this.lastDevice = 'keyboard';
       for (const h of this.anyKeyHandlers) h(e);
     });
-    addEventListener('keyup', (e) => this.down.delete(e.code));
+    addEventListener('keyup', (e) => {
+      this.down.delete(e.code);
+      // Firefox clicks a focused button on Space keyup even after keydown was cancelled; menus
+      // already clicked on keydown, so a second click would confirm "Begin again" by itself
+      if (e.code === 'Space') e.preventDefault();
+    });
     addEventListener('blur', () => this.down.clear());
     addEventListener('mousedown', () => this.gesture());
     addEventListener('touchstart', () => this.gesture(), { passive: true });
