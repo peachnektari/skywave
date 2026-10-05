@@ -20,6 +20,7 @@ export class Input {
     this.lastDevice = 'keyboard';
     this.padPrev = [];
     this.onFirstGesture = null;
+    this.onGesture = null; // every gesture: audio may have been created suspended
     this.anyKeyHandlers = [];
 
     addEventListener('keydown', (e) => {
@@ -34,6 +35,7 @@ export class Input {
     addEventListener('blur', () => this.down.clear());
     addEventListener('mousedown', () => this.gesture());
     addEventListener('touchstart', () => this.gesture(), { passive: true });
+    addEventListener('touchend', () => this.gesture());
     canvas.addEventListener('mousedown', () => {
       if (this.enabled && !this.locked && canvas.requestPointerLock) {
         const p = canvas.requestPointerLock();
@@ -50,6 +52,7 @@ export class Input {
 
   gesture() {
     if (this.onFirstGesture) { const f = this.onFirstGesture; this.onFirstGesture = null; f(); }
+    if (this.onGesture) this.onGesture();
   }
   releasePointer() { if (this.locked) document.exitPointerLock(); }
 
@@ -83,7 +86,9 @@ export class Input {
       if (edge(1) || edge(2)) action = true;
       if (edge(9)) pause = true;
       this.padPrev[p.index] = p.buttons.map((q) => q.pressed);
-      if (edge(12)) this.edges.add('ArrowUp'); if (edge(13)) this.edges.add('ArrowDown');
+      // menus listen to keys, so the pad speaks keys to them
+      const key = (code) => { const e = { code, repeat: false, preventDefault() {} }; for (const h of this.anyKeyHandlers) h(e); };
+      if (edge(12)) key('ArrowUp'); if (edge(13)) key('ArrowDown'); if (edge(0)) key('Enter');
     }
 
     if (this.virtual) {

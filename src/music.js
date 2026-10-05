@@ -237,7 +237,8 @@ export class Music {
   }
   stopSpatials() { for (const tr of this.spatials) tr.stop(0.8); this.spatials = []; }
   // Beat position of the main track (for things that move with the music).
-  beat() { return this.main ? this.main.beatAt(audio.t) : performance.now() / 1000; }
+  // Falls back to the wall clock while audio is suspended, so beat-driven machinery never stalls.
+  beat() { return this.main && audio.ctx && audio.ctx.state === 'running' ? this.main.beatAt(audio.t) : performance.now() / 1000 * this.bpm / 60; }
   get bpm() { return this.main ? this.main.def.bpm : 60; }
 }
 

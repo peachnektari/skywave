@@ -175,12 +175,12 @@ export default {
     const fog = g.scene.fog;
     fog.near = 140; fog.far = 480;
     g.rig.playShot({ dur: 8, blendIn: 1.4, blendOut: 1.6, fov: 56, look: [0, -10, 2], path: (k, out) => out.set(Math.sin(k * 0.8) * 8, 30 + 100 * k * k * (3 - 2 * k), 4 + 16 * k) });
-    setTimeout(() => {
+    g.world.after(7.6, () => {
       fog.near = 50; fog.far = 200;
       if (g.player.state === 'frozen') g.player.state = 'play';
       st.ident.hidden = false; st.ident.mesh.visible = true;
       g.fx.burst(0, 26.6, 0, { count: 40, color: CYAN, speed: 5, size: 0.25 });
-    }, 7600);
+    });
   },
 
   // A coiled phone cord you can ride with Line (one way, from first point to last).

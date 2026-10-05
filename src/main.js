@@ -45,6 +45,7 @@ class Game {
       music.resumePending();
       if (this.world.def) music.play(this.world.def.music);
     };
+    this.input.onGesture = () => audio.resume();
     addEventListener('resize', () => this.resize());
     this.resize();
 
@@ -71,6 +72,7 @@ class Game {
     this.fx.clear();
     audio.setMuffle(0);
     clearTimeout(this.completeTimer); this.completing = false;
+    this.ui.hidePause();
     const sp = this.world.load(def, opts);
     this.player.teleport(sp.x, sp.y, sp.z, sp.yaw ?? 0);
     this.player.state = 'play';
@@ -127,7 +129,7 @@ class Game {
   }
 
   setPaused(p) {
-    if (p && this.mode === 'play') { this.mode = 'paused'; this.input.releasePointer(); this.ui.showPause(); audio.setMuffle(0.6); }
+    if (p && this.mode === 'play' && !this.completing) { this.mode = 'paused'; this.input.releasePointer(); this.ui.showPause(); audio.setMuffle(0.6); }
     else if (!p && this.mode === 'paused') { this.mode = 'play'; this.ui.hidePause(); audio.setMuffle(0); }
   }
 
@@ -135,7 +137,8 @@ class Game {
     if (this.completing) return;
     this.completing = true;
     this.justCompleted = id;
-    this.save.giveIdent(id);
+    // the hour is only kept once the ending has played, so leaving early can't lose it
+    if (id !== 'closedown') this.save.giveIdent(id);
     this.save.setResume('hub', null);
     this.player.state = 'frozen';
     const c = pk ? new THREE.Vector3(pk.x, pk.y, pk.z) : this.player.pos.clone();
@@ -155,6 +158,7 @@ class Game {
   }
 
   ending() {
+    this.save.giveIdent('closedown');
     this.save.data.finished = true; this.save.write();
     this.mode = 'transition';
     this.ui.tune(LEVELS.hub, 0.5, () => { this.loadLevel('hub', { ending: true }); }).then(() => {
@@ -257,7 +261,7 @@ class Game {
 
     this.world.update(this.mode === 'paused' ? 0 : dt);
     if (this.mode === 'title') this.titleCamera(real);
-    else this.rig.update(real, this.mode === 'play' ? inp : { lookX: 0, lookY: 0 }, this.player, this.renderPos, this.world, this.physics, this.fx.trauma, this.time);
+    else this.rig.update(this.mode === 'paused' ? 0 : real, this.mode === 'play' ? inp : { lookX: 0, lookY: 0 }, this.player, this.renderPos, this.world, this.physics, this.fx.trauma, this.time);
     this.pip.update(dt, this.time, this.player, this.renderPos, this.camera, this.physics, music.beat());
     this.pip.root.visible = this.pip.visible && this.mode !== 'title';
     this.pip.shadow.visible = this.pip.shadow.visible && this.mode !== 'title';

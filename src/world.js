@@ -86,6 +86,7 @@ export class World {
     this.scene.add(this.sky);
     this.applyEnv(env);
 
+    this.timers = [];
     this.movers = []; this.waters = []; this.wires = []; this.checkpoints = []; this.pickups = [];
     this.triggers = []; this.camZones = []; this.prompts = []; this.echoes = []; this.animated = [];
     this.spawnPoint = { x: 0, y: 0, z: 0, yaw: 0 };
@@ -315,8 +316,16 @@ export class World {
   onRespawn() { if (this.def.onRespawn) this.def.onRespawn(this.state, this.g); }
 
   // ---- per frame ----
+  // Game-time delay for level sequences: frozen while paused, dropped when the level unloads.
+  after(sec, fn) { this.timers.push({ t: sec, fn }); }
+
   update(dt) {
     const U = this.U, t = this.t;
+    if (this.timers.length) {
+      const due = this.timers.filter((tm) => (tm.t -= dt) <= 0);
+      this.timers = this.timers.filter((tm) => tm.t > 0);
+      for (const tm of due) tm.fn();
+    }
     U.uTime.value = t;
     this.sky.material.uniforms.uTime.value = t;
     this.sky.position.copy(this.g.camera.position);

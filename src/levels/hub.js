@@ -315,7 +315,7 @@ export default {
     const m = st.mast;
     g.player.state = 'frozen';
     g.rig.playShot({ dur: 9, blendIn: 1.5, blendOut: 1.5, fov: 55, path: (k, out) => out.set(Math.sin(k * 1.4 + 2.2) * 30, 30 + k * 8, Math.cos(k * 1.4 + 2.2) * 30), look: [0, 36, 0] });
-    setTimeout(() => g.rig.playShot({ dur: 9, blendIn: 1.5, blendOut: 2, fov: 58, path: (k, out) => out.set(20 - k * 6, 5 + k * 20, 90 - k * 20), look: [0, 10, 0] }), 9000);
+    g.world.after(9, () => g.rig.playShot({ dur: 9, blendIn: 1.5, blendOut: 2, fov: 58, path: (k, out) => out.set(20 - k * 6, 5 + k * 20, 90 - k * 20), look: [0, 10, 0] }));
     g.ui.ending([
       { text: 'The sixth pip took its place.', wait: 3000 },
       { text: 'And the hour began, exactly on time.', wait: 3400 },
@@ -364,15 +364,15 @@ export default {
     const y = lampP.bulb.position.y;
     g.player.state = 'frozen';
     g.rig.playShot({ dur: 4.2, blendIn: 1.2, blendOut: 1.2, fov: 50, pos: [9, y - 3, 24], look: [0, y, 0] });
-    setTimeout(() => { lampP.set(1); audio.bell(0, 1, 0.14); audio.bell(4, 1, 0.1); g.fx.burst(0, y, lampP.bulb.position.z, { count: 40, color: 0xffc070, speed: 5, size: 0.3 }); }, 1700);
+    g.world.after(1.7, () => { lampP.set(1); audio.bell(0, 1, 0.14); audio.bell(4, 1, 0.1); g.fx.burst(0, y, lampP.bulb.position.z, { count: 40, color: 0xffc070, speed: 5, size: 0.3 }); });
     const opened = ORDER.find((k) => UNLOCK[k] === g.save.identCount() && LEVELS[k] && ENTR[k] && ENTR[k].door);
-    setTimeout(() => {
+    g.world.after(4.2, () => {
       if (opened) {
         const d = ENTR[opened].door;
         g.rig.playShot({ dur: 3.6, blendIn: 1.2, blendOut: 1.2, fov: 55, pos: [d[0] + 8, d[1] + 5, d[2] + 10], look: [d[0], d[1] + 1.5, d[2]] });
-        setTimeout(() => { g.player.state = 'play'; }, 3600);
+        g.world.after(3.6, () => { g.player.state = 'play'; });
       } else g.player.state = 'play';
-    }, 4200);
+    });
   },
 };
 

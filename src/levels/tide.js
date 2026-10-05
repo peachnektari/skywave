@@ -211,7 +211,7 @@ export default {
     music.setDepth(8);
     g.rig.playShot({ dur: 9, blendIn: 1.4, blendOut: 1.8, fov: 58, look: [0, -24, -88], path: (k, out) => out.set(26 + k * 18, 44 - k * 10, -50 + k * 10) });
     g.player.state = 'frozen';
-    setTimeout(() => { if (g.player.state === 'frozen') g.player.state = 'play'; }, 8200);
+    g.world.after(8.2, () => { if (g.player.state === 'frozen') g.player.state = 'play'; });
   },
 
   onCheckpoint(st, cp) {

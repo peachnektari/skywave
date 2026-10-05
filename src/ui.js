@@ -34,7 +34,7 @@ export class UI {
     const ticks = this.tuner.querySelector('.ticks');
     for (let i = 0; i <= 40; i++) ticks.append(el('i', i % 5 ? '' : 'major'));
     this.menuStack = [];
-    addEventListener('keydown', (e) => this.menuKey(e));
+    game.input.anyKeyHandlers.push((e) => this.menuKey(e)); // keys and gamepad alike
   }
 
   // ---------- menus ----------

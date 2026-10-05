@@ -64,6 +64,47 @@ await page.waitForTimeout(4200);
 const stay = await page.evaluate(() => window.__game.getState().level);
 check(stay === 'wireless', `level change cancels a pending completion (in ${stay})`);
 
+// no pausing mid-completion (the timer would carry on behind the menu)
+const midPause = await page.evaluate(() => { const g = window.__game.game; window.__game.loadLevel('tide'); g.completeLevel('tide'); g.setPaused(true); const m = g.mode; window.__game.loadLevel('hub'); return m; });
+check(midPause === 'play', `pause is ignored during a completion shot (mode ${midPause})`);
+
+// leaving Close Down before the ending plays must not cost the ending
+const finalIdent = await page.evaluate(() => { const g = window.__game.game; window.__game.loadLevel('closedown'); g.completeLevel('closedown'); window.__game.loadLevel('closedown'); return window.__game.pickups().find((p) => p.kind === 'ident').taken; });
+check(finalIdent === false, 'the hour stays collectable until the ending has played');
+
+// heath cutscenes belong to the heath: leaving mid-sequence must not drag the camera along
+await page.evaluate(() => { const g = window.__game.game; g.save.giveIdent('tide'); g.justCompleted = 'tide'; window.__game.loadLevel('hub', { from: 'tide' }); });
+await page.waitForTimeout(300);
+await page.evaluate(() => window.__game.loadLevel('wireless'));
+await page.waitForTimeout(5000);
+const leak = await page.evaluate(() => { const g = window.__game.game; return { shot: !!g.rig.shot, state: g.player.state }; });
+check(!leak.shot && leak.state === 'play', `hub lamp sequence stops when the level changes (shot ${leak.shot}, ${leak.state})`);
+
+// camera shots hold still while paused
+const held = await page.evaluate(async () => {
+  const g = window.__game.game;
+  g.rig.playShot({ dur: 3, pos: [0, 10, 0] }); g.setPaused(true);
+  await new Promise((r) => setTimeout(r, 500));
+  const t = g.rig.shot ? g.rig.shot.t : -1; g.setPaused(false); g.rig.shot = null; return t;
+});
+check(held >= 0 && held < 0.1, `camera shot is frozen while paused (t ${held.toFixed(2)})`);
+
+// a gamepad can drive the menus: D-pad moves focus, A presses
+const padNav = await page.evaluate(async () => {
+  const g = window.__game.game, wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const pad = { index: 0, connected: true, axes: [0, 0, 0, 0], buttons: Array.from({ length: 17 }, () => ({ pressed: false })) };
+  navigator.getGamepads = () => [pad];
+  const tap = async (i) => { pad.buttons[i].pressed = true; await wait(100); pad.buttons[i].pressed = false; await wait(100); };
+  g.setPaused(true); await wait(150);
+  const btns = () => [...g.ui.pauseEl.querySelectorAll('button:not([disabled])')];
+  const i0 = btns().indexOf(document.activeElement);
+  await tap(13); const i1 = btns().indexOf(document.activeElement);
+  await tap(12); await tap(0);
+  delete navigator.getGamepads;
+  return { i0, i1, mode: g.mode };
+});
+check(padNav.i1 === padNav.i0 + 1 && padNav.mode === 'play', `gamepad navigates and presses menu buttons (${JSON.stringify(padNav)})`);
+
 // resize
 await page.setViewportSize({ width: 800, height: 900 });
 await page.waitForTimeout(300);
@@ -75,6 +116,20 @@ await page.keyboard.press('KeyW');
 await page.waitForTimeout(300);
 const audioState = await page.evaluate(() => import('/src/audio.js').then((m) => m.audio.ctx && m.audio.ctx.state));
 check(audioState === 'running', `audio context running after first input (${audioState})`);
+
+// a first input that can't unlock audio (gamepad, touchstart) leaves it suspended: the beat must
+// still keep time, and any later key or click must resume it
+await page.evaluate(() => import('/src/audio.js').then((m) => m.audio.ctx.suspend()));
+await page.evaluate(() => window.__game.loadLevel('wireless'));
+const beat = () => page.evaluate(() => import('/src/music.js').then((m) => m.music.beat()));
+const b0 = await beat();
+await page.waitForTimeout(800);
+const b1 = await beat();
+check(b1 > b0 + 0.3, `beat keeps time while audio is suspended (+${(b1 - b0).toFixed(2)})`);
+await page.keyboard.press('KeyD');
+await page.waitForTimeout(300);
+const resumed = await page.evaluate(() => import('/src/audio.js').then((m) => m.audio.ctx.state));
+check(resumed === 'running', `a later input resumes suspended audio (${resumed})`);
 
 // save survives a reload
 await page.evaluate(() => { window.__game.game.save.collect('hub', 'qsl'); });
