@@ -239,7 +239,7 @@ export class Music {
   // Beat position of the main track (for things that move with the music).
   // Falls back to the wall clock while audio is suspended, so beat-driven machinery never stalls.
   beat() { return this.main && audio.ctx && audio.ctx.state === 'running' ? this.main.beatAt(audio.t) : performance.now() / 1000 * this.bpm / 60; }
-  get bpm() { return this.main ? this.main.def.bpm : 60; }
+  get bpm() { const d = this.main ? this.main.def : this.pending; return d ? d.bpm : 60; } // pending: no audio yet
 }
 
 export const music = new Music();

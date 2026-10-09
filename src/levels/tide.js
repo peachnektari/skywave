@@ -137,9 +137,9 @@ export default {
 
     // ---- the lighthouse rock, the lighthouse, and what it stands on
     L.block(0, -8, -92, 24, 17.5, 22, { color: ROCK });
-    L.block(13, -8, -86, 4, 13, 3, { color: STONE });
+    L.block(13, -8, -86.3, 4, 13, 3.6, { color: STONE }); // flush with the next step: no slot to fall into
     L.block(13.5, -8, -89.6, 3, 15.2, 3, { color: STONE });
-    L.checkpoint(-4, 9.5, -84, { depth: 6 });
+    L.checkpoint(6, 9.5, -87.5, { depth: 6 }); // on the way from the rock steps to the spiral
     for (let i = 0; i < 6; i++) {
       const r0 = 3.2 - (i / 6) * 0.6, r1 = 3.2 - ((i + 1) / 6) * 0.6, c = i % 2 ? 0xb83a2a : 0xece4d4;
       L.mesh(place(cylinder(r1, r0, 22 / 6, 18, c, c), 0, 9.5 + (i * 22) / 6, -92));

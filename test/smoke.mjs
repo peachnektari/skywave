@@ -2,12 +2,12 @@
 // window.__game, and fails on any console error or a frame counter that stops advancing.
 // Also checks resize, save/load through localStorage, and audio resuming on first input.
 //   npm install && npx playwright install chromium   (once)
-//   npm test
+//   npm test                        (BROWSER=firefox npm test after `npx playwright install firefox`)
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
+import { chromium, firefox } from 'playwright';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.md': 'text/plain' };
@@ -25,7 +25,8 @@ await new Promise((r) => server.listen(0, r));
 const url = `http://localhost:${server.address().port}/`;
 
 let browser;
-try { browser = await chromium.launch(); } catch { browser = await chromium.launch({ channel: 'chrome' }); }
+if (process.env.BROWSER === 'firefox') browser = await firefox.launch();
+else try { browser = await chromium.launch(); } catch { browser = await chromium.launch({ channel: 'chrome' }); }
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const errors = [];
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
@@ -34,6 +35,11 @@ page.on('pageerror', (e) => errors.push(e.message));
 const fail = [];
 const check = (ok, msg) => { console.log(`${ok ? 'ok  ' : 'FAIL'} ${msg}`); if (!ok) fail.push(msg); };
 const frame = () => page.evaluate(() => window.__game.getState().frame);
+// Waits on game time, not the wall clock: a slow or busy browser clamps long frames.
+const waitGame = async (sec) => {
+  const t = await page.evaluate(() => window.__game.game.time);
+  await page.waitForFunction((end) => window.__game.game.time >= end, t + sec, { timeout: 60000 });
+};
 
 await page.goto(url);
 await page.waitForFunction(() => window.__game && window.__game.getState().frame > 2, null, { timeout: 30000 });
@@ -54,7 +60,7 @@ for (const id of levels) {
 
 // teleport + getState
 await page.evaluate(() => { window.__game.loadLevel('hub'); window.__game.teleport(0, 20, 60); });
-await page.waitForTimeout(1200);
+await waitGame(2);
 const fell = await page.evaluate(() => window.__game.getState());
 check(fell.grounded && fell.pos.y < 20, 'teleport, gravity and ground contact');
 
@@ -76,7 +82,7 @@ check(finalIdent === false, 'the hour stays collectable until the ending has pla
 await page.evaluate(() => { const g = window.__game.game; g.save.giveIdent('tide'); g.justCompleted = 'tide'; window.__game.loadLevel('hub', { from: 'tide' }); });
 await page.waitForTimeout(300);
 await page.evaluate(() => window.__game.loadLevel('wireless'));
-await page.waitForTimeout(5000);
+await waitGame(6); // past the Wireless intro shot (4.4), inside a leaked door shot (4.2-7.8)
 const leak = await page.evaluate(() => { const g = window.__game.game; return { shot: !!g.rig.shot, state: g.player.state }; });
 check(!leak.shot && leak.state === 'play', `hub lamp sequence stops when the level changes (shot ${leak.shot}, ${leak.state})`);
 
@@ -88,6 +94,16 @@ const held = await page.evaluate(async () => {
   const t = g.rig.shot ? g.rig.shot.t : -1; g.setPaused(false); g.rig.shot = null; return t;
 });
 check(held >= 0 && held < 0.1, `camera shot is frozen while paused (t ${held.toFixed(2)})`);
+
+// before any input there is no audio at all: the beat still runs at the level's tempo
+const tempo = await page.evaluate(async () => {
+  const { music } = await import('/src/music.js'), { audio } = await import('/src/audio.js');
+  window.__game.loadLevel('wireless');
+  const b0 = music.beat(), t0 = performance.now();
+  await new Promise((r) => setTimeout(r, 1000));
+  return { noCtx: !audio.ctx, bps: (music.beat() - b0) / ((performance.now() - t0) / 1000) };
+});
+check(tempo.noCtx && Math.abs(tempo.bps - 108 / 60) < 0.2, `beat follows The Wireless at 108 bpm with no audio (${tempo.bps.toFixed(2)} beats/s)`);
 
 // a gamepad can drive the menus: D-pad moves focus, A presses
 const padNav = await page.evaluate(async () => {

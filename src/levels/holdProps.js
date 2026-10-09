@@ -21,8 +21,7 @@ export function plaza(L, x, top, z, digit, r = 5) {
   L.mesh(place(cylinder(r, r, 1.2, 32, OAT, LILAC), x, top - 1.2, z));
   L.mesh(place(cylinder(r * 0.92, r * 0.25, 3.4, 24, LILAC, PLUM), x, top - 4.6, z));
   L.mesh(place(paint(new THREE.TorusGeometry(r - 0.25, 0.14, 6, 40).rotateX(Math.PI / 2), 0xc8bcd8), x, top + 0.04, z));
-  // six rectangles inscribed in the circle: within ~4% of the rim everywhere
-  for (let i = 0; i < 6; i++) { const a = ((7.5 + i * 15) * Math.PI) / 180; L.solid(x, top - 1.2, z, 2 * r * Math.cos(a), 1.2, 2 * r * Math.sin(a)); }
+  L.disc(x, top - 1.2, z, r, 1.2); // the turnstile meets its plazas on diagonals
   if (digit !== undefined) {
     const { tex } = canvasTex(128, 128, (g2) => {
       g2.fillStyle = '#ffffff'; g2.font = 'bold 104px Georgia, serif'; g2.textAlign = 'center'; g2.textBaseline = 'middle';

@@ -40,15 +40,20 @@ export class Builder {
   plat(x, top, z, w, d, o = {}) { const t = o.t ?? 1; return this.block(x, top - t, z, w, t, d, o); }
   solid(x, y0, z, w, h, d, o = {}) { return this.phys.addBox(x - w / 2, y0, z - d / 2, x + w / 2, y0 + h, z + d / 2, o); }
 
-  // Round column; collider is the inscribed square unless o.solid === false.
+  // Round column; collider is a disc unless o.solid === false (o.fit: a hand-sized square instead).
   pillar(x, y0, z, r, h, o = {}) {
     const top = o.color ?? this.pal.top;
     const g = cylinder(o.rTop ?? r, r, h, o.seg ?? 12, top, o.side ?? shade(top, 0.66));
     place(g, x, y0, z);
     this.geo(g, o.glow ? 'glow' : 'world');
-    if (o.solid === false) return null;
-    const s = r * (o.fit ?? 1.5);
-    return this.phys.addBox(x - s / 2, y0, z - s / 2, x + s / 2, y0 + h, z + s / 2, o);
+    if (o.solid === false) return;
+    if (o.fit) { const s = r * o.fit; this.phys.addBox(x - s / 2, y0, z - s / 2, x + s / 2, y0 + h, z + s / 2, o); return; }
+    this.disc(x, y0, z, r, h, o);
+  }
+  // Boxes inscribed in a circle, turned in even steps: 8 reach 90% of the rim, 20 reach 96%.
+  disc(x, y0, z, r, h, o = {}) {
+    const n = r < 0.3 ? 1 : Math.min(20, Math.ceil(r * 8));
+    for (let i = 0; i < n; i++) { const a = ((i + 0.5) / n) * (Math.PI / 2); this.solid(x, y0, z, 2 * r * Math.cos(a), h, 2 * r * Math.sin(a), o); }
   }
 
   // Footprint w×d centred at x,z; the surface rises by `rise` toward dir ('+x','-x','+z','-z').

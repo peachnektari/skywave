@@ -42,7 +42,7 @@ from the pause menu.
 - **Fair, Becoming Poor** *(198 kHz)*: the shipping forecast, settled into a sea. The tide decides what you can reach.
 - **The Wireless** *(909 kHz)*: the inside of a valve radio, with you the size of a crumb. Things here move to the beat.
 - **Please Hold** *(1215 kHz)*: waiting, made into a place. Nothing moves unless you stand still.
-- **Which Summer** *(94.6 MHz)*: a request for Ada, from Tom. The memory only holds together where you look.
+- **Which Summer** *(94.6 MHz)*: a request for Ada, from Tom. The memory only holds together around you.
 - **Mean Time** *(60 kHz)*: the observatory where the hour is kept. Everything moves one notch per second.
 - **Close Down** *(off air)*: what's left after the station signs off.
 
@@ -51,6 +51,7 @@ from the pause menu.
 ```sh
 npm install && npx playwright install chromium   # once
 npm test
+BROWSER=firefox npm test                          # after npx playwright install firefox
 ```
 
 `test/smoke.mjs` serves the folder and loads the game in headless Chromium. It loads every
