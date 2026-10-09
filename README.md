@@ -8,7 +8,9 @@ you see, from the geometry to the sky to the music, is generated in code. There 
 
 ## Run it
 
-There's no build step and no install. Serve this folder with any static server and open it:
+**Play it in your browser: https://peachnektari.github.io/skywave/**
+
+To run it locally, there's no build step and no install. Serve this folder with any static server and open it:
 
 ```sh
 npx serve .                # then open the printed URL
